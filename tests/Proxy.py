@@ -16,6 +16,10 @@ class TestProxy(unittest.TestCase):
     def test_equality(self):
         self.assertEqual(self.proxies[0], self.proxies[0], "proxy != proxy???")
         self.assertNotEqual(self.proxies[0], self.proxies[1], "proxy == other_proxy???")
+    
+    def test_hash(self):
+        self.assertEqual(hash(self.proxies[0]), hash(self.proxies[0]), "hash(proxy) != hash(proxy)?????")
+        self.assertNotEqual(hash(self.proxies[0]), hash(self.proxies[1]), "hash(proxy) != hash(other_proxy)?????")
 
 
 

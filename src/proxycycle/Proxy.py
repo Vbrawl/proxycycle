@@ -25,3 +25,6 @@ class Proxy:
         if isinstance(o, Proxy):
             return self.host == o.host and self.port == o.port and self.scheme == o.scheme
         return False
+    
+    def __hash__(self) -> int:
+        return hash((self.host, self.port,))
