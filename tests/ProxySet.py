@@ -2,6 +2,7 @@ import unittest
 from proxycycle.ProxySet import ProxySet
 from proxycycle.Proxy import Proxy
 from proxycycle.enums import AnonymityLevel
+from io import StringIO
 
 
 ## NOTE: To ensure each test doesn't overlap with each other and ensure reliable results
@@ -65,6 +66,17 @@ class TestProxySet(unittest.TestCase):
 
         it = ps.cycle()
         self.assertEqual(next(it), next(it), "cycle didn't return the same object twice in a single item ProxySet")
+    
+    def test_fromFile(self):
+        fdata = StringIO()
+        fdata.writelines(map(Proxy.toString, self.psl))
+        fdata.seek(0)
+        psl2 = ProxySet.fromFile(fdata)
+
+        self.assertEqual(len(self.psl), len(psl2), "fromFile didn't load all proxies")
+
+        for i, proxy in enumerate(self.psl):
+            self.assertEqual(proxy, psl2[i], "fromFile didn't return a ProxySet with the correct proxies")
 
 if __name__ == "__main__":
     unittest.main(verbosity=3)

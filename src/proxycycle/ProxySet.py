@@ -1,7 +1,9 @@
 from __future__ import annotations
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, TYPE_CHECKING
+if TYPE_CHECKING: from _typeshed import SupportsNoArgReadline
 from .Proxy import Proxy
 import itertools
+import warnings
 
 class ProxySet(Iterable):
     def __init__(self, proxies:Iterable[Proxy] = []):
@@ -31,3 +33,14 @@ class ProxySet(Iterable):
     
     def cycle(self) -> Iterator[Proxy]:
         return itertools.cycle(self._proxies)
+    
+    @classmethod
+    def fromFile(cls, fileR:SupportsNoArgReadline[str]) -> ProxySet:
+        proxies = []
+
+        while (line := fileR.readline()).strip():
+            try:
+                proxies.append(Proxy.fromString(line))
+            except ValueError as err:
+                warnings.warn(str(err), SyntaxWarning)
+        return ProxySet(proxies)
