@@ -27,7 +27,7 @@ class Proxy:
         return False
     
     def __hash__(self) -> int:
-        return hash((self.host, self.port,))
+        return hash((self.host, self.port, self.scheme))
     
     @classmethod
     def fromString(cls, string:str) -> Proxy:
