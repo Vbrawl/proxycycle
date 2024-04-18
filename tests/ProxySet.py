@@ -25,7 +25,7 @@ class TestProxySet(unittest.TestCase):
         self.assertEqual(len(self.psl), expected_length, "set_proxy didn't add an inexistent proxy")
 
         self.psl.set_proxy(Proxy("127.0.0.1", 8080, anonymity_level=AnonymityLevel.Anonymous))
-        self.assertEqual(self.psl[expected_length].anonymity_level, AnonymityLevel.Anonymous, "set_proxy didn't update existing entry")
+        self.assertEqual(self.psl[expected_length - 1].anonymity_level, AnonymityLevel.Anonymous, "set_proxy didn't update existing entry")
     
     def test_extend_with_proxysets(self):
         length = len(self.psl)
@@ -58,7 +58,13 @@ class TestProxySet(unittest.TestCase):
             loop_number += 1
         self.assertNotEqual(loop_number, 0, "loop-iteration didn't work")
     
-    # TODO: Add test for "cycle" method.
+    def test_cycle(self):
+        ps = ProxySet([
+            Proxy("127.0.0.0", 8080)
+        ])
+
+        it = ps.cycle()
+        self.assertEqual(next(it), next(it), "cycle didn't return the same object twice in a single item ProxySet")
 
 if __name__ == "__main__":
     unittest.main(verbosity=3)
