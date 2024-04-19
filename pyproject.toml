@@ -22,12 +22,12 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = []
+dependencies = ["requests"]
 
 [project.urls]
-Documentation = "https://github.com/unknown/proxycycle#readme"
-Issues = "https://github.com/unknown/proxycycle/issues"
-Source = "https://github.com/unknown/proxycycle"
+Documentation = "https://github.com/Vbrawl/proxycycle#readme"
+Issues = "https://github.com/Vbrawl/proxycycle/issues"
+Source = "https://github.com/Vbrawl/proxycycle"
 
 [tool.hatch.envs.default]
 dependencies = [
