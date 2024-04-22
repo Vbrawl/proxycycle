@@ -31,6 +31,9 @@ class Proxy:
             int(self.anonymity_level),
             self.latency
         )
+    
+    def __str__(self) -> str:
+        return self.toString()
 
     def __eq__(self, o: object) -> bool:
         """Check if proxy server is identical to another object.
