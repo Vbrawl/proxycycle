@@ -3,7 +3,18 @@ from .enums import Scheme, AnonymityLevel
 
 
 class Proxy:
+    """A class to hold information about a proxy server
+    """
     def __init__(self, host:str, port:int, scheme:Scheme|int = Scheme.Undefined, anonymity_level:AnonymityLevel|int = AnonymityLevel.Undefined, latency:int = -1):
+        """Initialize a proxy instance.
+
+        Args:
+            host (str): The hostname or ip address of the proxy server.
+            port (int): The port to connect for the proxy service.
+            scheme (Scheme | int, optional): The scheme/protocol used for connecting to the proxy. Defaults to Scheme.Undefined.
+            anonymity_level (AnonymityLevel | int, optional): The anonymity level of the proxy. Defaults to AnonymityLevel.Undefined.
+            latency (int, optional): The latency of the server (At least what we know). Defaults to -1.
+        """
         self.host = host
         self.port = port
 
@@ -22,6 +33,20 @@ class Proxy:
         )
 
     def __eq__(self, o: object) -> bool:
+        """Check if proxy server is identical to another object.
+
+        For this to be true the object needs to:
+        1) be a Proxy object
+        2) have the same host
+        3) have the same port
+        4) have the same scheme
+
+        Args:
+            o (object): The object to be compared to the proxy.
+
+        Returns:
+            bool: Whether the object is equal to the proxy or not.
+        """
         if isinstance(o, Proxy):
             return self.host == o.host and self.port == o.port and self.scheme == o.scheme
         return False
@@ -83,6 +108,11 @@ class Proxy:
             raise ValueError(f"string({string}) doesn't seem to be a valid proxy server.")
     
     def toString(self) -> str:
+        """Return a string representation of the data.
+
+        Returns:
+            str: The string representation of the data.
+        """
         string = f"{self.host}:{self.port}"
         try:
             schemeName = {
