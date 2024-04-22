@@ -16,6 +16,9 @@ class ProxySet(Iterable):
         """
         self._proxies = []
         self.extend_with_proxysets(proxies)
+    
+    def __repr__(self) -> str:
+        return f"{self.__class__.__qualname__}({self._proxies})"
 
     def set_proxy(self, proxy: Proxy) -> None:
         """Add a proxy to the set or update the proxy if it's already included.
