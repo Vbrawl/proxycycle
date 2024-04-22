@@ -38,16 +38,16 @@ class ProxySet(Iterable):
         for proxyset in proxysets:
             for proxy in proxyset:
                 self.set_proxy(proxy)
-    
+
     def __getitem__(self, key:int) -> Proxy:
         return self._proxies[key]
-    
+
     def __len__(self) -> int:
         return len(self._proxies)
-    
+
     def __iter__(self) -> Iterator[Proxy]:
         return iter(self._proxies)
-    
+
     def cycle(self) -> Iterator[Proxy]:
         """Cycle infinitely through the set (loop to the start when no more proxies exist).
 
@@ -55,12 +55,16 @@ class ProxySet(Iterable):
             Iterator[Proxy]: Returns an iterator that loops through the entire set infinitely.
         """
         return itertools.cycle(self._proxies)
-    
-    def deduplicate(self, select:Callable[[list[Proxy]], Proxy|None] = lambda x: x[0]) -> ProxySet:
+
+    def deduplicate(self, select:Callable[[list[Proxy]], Iterable[Proxy]|Proxy|None] = lambda x: x[0]) -> ProxySet:
         """Remove duplicates of the same host.
 
+        NOTE: If "select" returns an Iterable, all proxies in it are included.
+        NOTE 2: If "select" returns a Proxy, it is included.
+        NOTE 3: If "select" returns None, it is assumed no proxy was selected and no proxy is included.
+
         Args:
-            select (Callable[[list[Proxy]], Proxy|None], optional): A callable that accepts a list[Proxy] as parameter and returns either a Proxy or None. Defaults to lambdax:x[0].
+            select (Callable[[list[Proxy]], Iterable[Proxy]|Proxy|None], optional): A callable that accepts a list[Proxy] as parameter and returns either an Iterable[Proxy], Proxy or None. Defaults to lambdax:x[0].
 
         Returns:
             ProxySet: A proxy set containing all proxies returned by the "select" callable.
@@ -73,13 +77,16 @@ class ProxySet(Iterable):
                 proxies[proxy.host].append(proxy)
             else:
                 proxies[proxy.host] = [proxy]
-        
+
         for proxy in map(select, proxies.values()):
             if proxy is not None:
-                proxyset.set_proxy(proxy)
+                if isinstance(proxy, Iterable):
+                    proxyset.extend_with_proxysets(proxy)
+                else:
+                    proxyset.set_proxy(proxy)
 
-        return ProxySet(proxyset)
-    
+        return proxyset
+
     @classmethod
     def fromFile(cls, fileR:SupportsNoArgReadline[str]) -> ProxySet:
         """Initialize a ProxySet from a file of proxies.
