@@ -77,6 +77,38 @@ class TestProxySet(unittest.TestCase):
 
         for i, proxy in enumerate(self.psl):
             self.assertEqual(proxy, psl2[i], "fromFile didn't return a ProxySet with the correct proxies")
+    
+
+    def test_deduplicate(self):
+        proxies = ProxySet([
+            Proxy("127.0.0.4", 8000),
+            Proxy("127.0.0.4", 8001, anonymity_level=AnonymityLevel.Anonymous),
+            Proxy("127.0.0.4", 8002, anonymity_level=AnonymityLevel.Elite),
+            Proxy("127.0.0.5", 8000),
+            Proxy("127.0.0.6", 8002)
+        ])
+
+        nproxies = proxies.deduplicate()
+
+        self.assertEqual(len(nproxies), 3)
+
+        def select_elite_anonymity(proxies:list[Proxy]):
+            for i in proxies:
+                if i.anonymity_level == AnonymityLevel.Elite:
+                    return i
+            return None
+        nproxies2 = proxies.deduplicate(select_elite_anonymity)
+
+        self.assertEqual(len(nproxies2), 1)
+
+        def select_8002_ports(proxies:list[Proxy]):
+            for i in proxies:
+                if i.port == 8002:
+                    return i
+            return None
+        nproxies3 = proxies.deduplicate(select_8002_ports)
+
+        self.assertEqual(len(nproxies3), 2)
 
 if __name__ == "__main__":
     unittest.main(verbosity=3)

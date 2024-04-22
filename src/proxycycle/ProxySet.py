@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Iterable, Iterator, TYPE_CHECKING
+from typing import Iterable, Iterator, TYPE_CHECKING, Callable
 if TYPE_CHECKING: from _typeshed import SupportsNoArgReadline
 from .Proxy import Proxy
 import itertools
@@ -33,6 +33,22 @@ class ProxySet(Iterable):
     
     def cycle(self) -> Iterator[Proxy]:
         return itertools.cycle(self._proxies)
+    
+    def deduplicate(self, select:Callable[[list[Proxy]], Proxy|None] = lambda x: x[0]) -> ProxySet:
+        proxies:dict[str, list[Proxy]] = {}
+        proxyset = ProxySet()
+
+        for proxy in self:
+            if proxy.host in proxies:
+                proxies[proxy.host].append(proxy)
+            else:
+                proxies[proxy.host] = [proxy]
+        
+        for proxy in map(select, proxies.values()):
+            if proxy is not None:
+                proxyset.set_proxy(proxy)
+
+        return ProxySet(proxyset)
     
     @classmethod
     def fromFile(cls, fileR:SupportsNoArgReadline[str]) -> ProxySet:
