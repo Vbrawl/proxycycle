@@ -49,6 +49,28 @@ with open('file.txt', 'r') as f:
 from proxycycle.api.proxyscrape import ProxyScrape
 ps5 = ProxyScrape.fetch_proxyset(50)
 len(ps5) # less or equal to 50   ^^ (this 50)
+
+### Sometimes a single host can have multiple proxy servers
+### In that case we can filter out some of the proxy entries.
+from functools import partial
+
+# Get the first (by index) proxy
+ps1_deduplicated = ps1.deduplicate()
+
+# Get proxies with port number > 8080
+ps1_8080 = ps1.deduplicate(partial(filter, lambda x: x.port > 8080))
+
+# Get the proxy with the highest anonymity level
+def select_highest_anonymity_proxy(proxylist:list[Proxy]):
+    proxy:Proxy|None = None
+    for p in proxylist:
+        if proxy is None:
+            proxy = p
+        elif p.anonymity_level > proxy.anonymity_level:
+            proxy = p
+    return proxy
+
+ps1_highest_anonymity = ps1.deduplicate(select_highest_anonymity_proxy)
 ```
 
 ## License
