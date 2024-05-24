@@ -73,5 +73,10 @@ exclude_lines = [
   "if TYPE_CHECKING:",
 ]
 
+[tool.pytest.ini_options]
+testpaths = [
+  "tests/*"
+]
+
 [project.scripts]
 fetch-proxy = "proxycycle.cli.fetch_proxy:fetch_proxy"

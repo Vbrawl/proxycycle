@@ -1,114 +1,142 @@
-import unittest
+# import unittest
+import pytest
 from proxycycle.ProxySet import ProxySet
 from proxycycle.Proxy import Proxy
 from proxycycle.enums import AnonymityLevel
 from io import StringIO
+from functools import partial
+
+@pytest.fixture
+def proxy1():
+    return Proxy("127.0.0.1", 8080)
+
+@pytest.fixture
+def proxy1alt():
+    return Proxy("127.0.0.1", 8080, anonymity_level=AnonymityLevel.Elite)
+
+@pytest.fixture
+def proxy2():
+    return Proxy("127.0.0.2", 8080)
+
+@pytest.fixture
+def proxy2alt():
+    return Proxy("127.0.0.2", 8080, anonymity_level=AnonymityLevel.Elite)
+
+@pytest.fixture
+def proxy3():
+    return Proxy("127.0.0.3", 8080)
 
 
-## NOTE: To ensure each test doesn't overlap with each other and ensure reliable results
-# Each Proxy should have an IP and as we go down we increment the last octet.
-#
-# Example:
-## The setup function adds an IP 127.0.0.0
-## A function that needs to create a new IP will add the IP 127.0.0.1
-## The next will add 127.0.0.2
-## and so on...
+def test_set_proxy(proxy1:Proxy, proxy1alt:Proxy, proxy2:Proxy):
+    ps = ProxySet([proxy1])
+    pslen = len(ps)
+    ps.set_proxy(proxy1alt)
+    assert len(ps) == pslen
+    assert ps[0].anonymity_level == proxy1alt.anonymity_level
 
-class TestProxySet(unittest.TestCase):
-    def setUp(self):
-        self.fproxy = Proxy("127.0.0.0", 8080)
-        self.psl = ProxySet([self.fproxy])
+    ps.set_proxy(proxy2)
+    assert len(ps) == pslen+1
+
+def test_extend_with_proxysets(proxy1:Proxy, proxy1alt:Proxy, proxy2:Proxy, proxy2alt:Proxy, proxy3:Proxy):
+    ps = ProxySet([proxy1])
+    psextend = ProxySet([proxy1alt, proxy2]) # ProxySet to use for extending ps
+    psextend2 = ProxySet([proxy2alt, proxy3])
+
+    ps.extend_with_proxysets(psextend, psextend2)
+    assert len(ps) == 3 # the "alt" proxies will just alter the existing entries so we don't count them.
+
+    assert ps[0] == proxy1alt
+    assert ps[1] == proxy2alt
+    assert ps[2] == proxy3
+
+def test_getitem(proxy1:Proxy, proxy2:Proxy):
+    ps = ProxySet([proxy1, proxy2])
+    assert ps[0] == proxy1
+    assert ps[1] == proxy2
+
+def test_len(proxy1:Proxy, proxy2:Proxy, proxy3:Proxy):
+    ps = ProxySet()
+    assert len(ps) == 0
+
+    ps.set_proxy(proxy1)
+    assert len(ps) == 1
+
+    ps.set_proxy(proxy2)
+    assert len(ps) == 2
+
+    ps.set_proxy(proxy3)
+    assert len(ps) == 3
+
+def test_iter(proxy1:Proxy, proxy2:Proxy, proxy3:Proxy):
+    loop_number = 0
+    ps = ProxySet([proxy1, proxy2, proxy3])
+    for p in ps:
+        loop_number += 1
+    assert loop_number == 3
+
+def test_cycle(proxy1:Proxy, proxy2:Proxy, proxy3:Proxy):
+    def cycle_through(pset:ProxySet, divider:int, max_loop:int, conditions:dict[int, Proxy]) -> int:
+        i = 0
+        for i, p in enumerate(pset.cycle()):
+            assert p == conditions[i % divider]
+            if i == max_loop: return i
+        return i
+
+    ps = ProxySet()
+    conditions = {}
+    max_loop = 0
     
-    def test_set_proxy(self):
-        length = len(self.psl)
-        expected_length = length + 1
-        self.psl.set_proxy(Proxy("127.0.0.1", 8080))
-        self.assertEqual(len(self.psl), expected_length, "set_proxy didn't add an inexistent proxy")
+    # 0
+    for i in ps.cycle():
+        assert False
 
-        self.psl.set_proxy(Proxy("127.0.0.1", 8080, anonymity_level=AnonymityLevel.Anonymous))
-        self.assertEqual(self.psl[expected_length - 1].anonymity_level, AnonymityLevel.Anonymous, "set_proxy didn't update existing entry")
-    
-    def test_extend_with_proxysets(self):
-        length = len(self.psl)
-        expected_length = length + 2
-        self.psl.extend_with_proxysets(ProxySet([
-            Proxy("127.0.0.2", 8080),
-            Proxy("127.0.0.3", 8080)
-        ]), ProxySet([
-            Proxy("127.0.0.2", 8080, anonymity_level=AnonymityLevel.Anonymous), # Replace anonymity_level of first added proxy
-            Proxy("127.0.0.3", 8080, anonymity_level=AnonymityLevel.Anonymous)  # Replace anonymity_level of the second added proxy
-        ]))
-        self.assertEqual(len(self.psl), expected_length, "extend_with_proxysets didn't add new proxies")
+    # 1
+    ps.set_proxy(proxy1)
+    conditions[0] = proxy1
+    max_loop = 4 * len(conditions)
+    assert cycle_through(ps, 1, max_loop, conditions) == max_loop
 
-        fprox = self.psl[length + 1]
-        self.assertEqual(fprox.anonymity_level, AnonymityLevel.Anonymous, "extend_with_proxysets didn't update the proxy with the correct details")
-    
-    def test_getitem(self):
-        self.assertEqual(self.psl[0], self.fproxy, "getitem didn't work for the first parameter")
-        self.assertEqual(self.psl[-1], self.psl[len(self.psl) - 1], "getitem didn't work for negative or non-zero index")
-    
-    def test_len(self):
-        plst = ProxySet()
-        self.assertEqual(len(plst), 0, "Empty ProxySet should doesn't have length 0")
-        plst.set_proxy(self.fproxy)
-        self.assertEqual(len(plst), 1, "set_proxy didn't update len??")
-    
-    def test_iter(self):
-        loop_number = 0
-        for _ in self.psl:
-            loop_number += 1
-        self.assertNotEqual(loop_number, 0, "loop-iteration didn't work")
-    
-    def test_cycle(self):
-        ps = ProxySet([
-            Proxy("127.0.0.0", 8080)
-        ])
+    # 2
+    ps.set_proxy(proxy2)
+    conditions[1] = proxy2
+    max_loop = 4 * len(conditions)
+    assert cycle_through(ps, 2, max_loop, conditions) == max_loop
 
-        it = ps.cycle()
-        self.assertEqual(next(it), next(it), "cycle didn't return the same object twice in a single item ProxySet")
-    
-    def test_fromFile(self):
-        fdata = StringIO()
-        fdata.writelines(map(Proxy.toString, self.psl))
-        fdata.seek(0)
-        psl2 = ProxySet.fromFile(fdata)
+    # 3
+    ps.set_proxy(proxy3)
+    conditions[2] = proxy3
+    max_loop = 4 * len(conditions)
+    assert cycle_through(ps, 3, max_loop, conditions) == max_loop
 
-        self.assertEqual(len(self.psl), len(psl2), "fromFile didn't load all proxies")
+def test_fromFile(proxy1:Proxy, proxy2:Proxy, proxy3:Proxy, proxy1alt:Proxy):
+    ps = ProxySet([proxy1, proxy2, proxy3])
 
-        for i, proxy in enumerate(self.psl):
-            self.assertEqual(proxy, psl2[i], "fromFile didn't return a ProxySet with the correct proxies")
-    
+    fdata = StringIO()
+    fdata.write('\n'.join(map(Proxy.toString, ps)))
+    fdata.seek(0)
 
-    def test_deduplicate(self):
-        proxies = ProxySet([
-            Proxy("127.0.0.4", 8000),
-            Proxy("127.0.0.4", 8001, anonymity_level=AnonymityLevel.Anonymous),
-            Proxy("127.0.0.4", 8002, anonymity_level=AnonymityLevel.Elite),
-            Proxy("127.0.0.5", 8000),
-            Proxy("127.0.0.6", 8002)
-        ])
+    ps2 = ProxySet.fromFile(fdata)
 
-        nproxies = proxies.deduplicate()
+    assert len(ps) == len(ps2)
+    for i, proxy in enumerate(ps):
+        assert proxy == ps2[i]
 
-        self.assertEqual(len(nproxies), 3)
 
-        def select_elite_anonymity(proxies:list[Proxy]):
-            for i in proxies:
-                if i.anonymity_level == AnonymityLevel.Elite:
-                    return i
-            return None
-        nproxies2 = proxies.deduplicate(select_elite_anonymity)
+def test_deduplicate():
+    # Don't use proxy1, proxy1alt, etc because we need to know the exact proxy definitions to test this case.
+    proxies = ProxySet([
+        Proxy("127.0.0.1", 8000),
+        Proxy("127.0.0.1", 8001, anonymity_level=AnonymityLevel.Anonymous),
+        Proxy("127.0.0.1", 8002, anonymity_level=AnonymityLevel.Elite),
+        Proxy("127.0.0.2", 8000),
+        Proxy("127.0.0.3", 8002)
+    ])
 
-        self.assertEqual(len(nproxies2), 1)
+    nproxies = proxies.deduplicate()
+    assert len(nproxies) == 3
 
-        def select_8002_ports(proxies:list[Proxy]):
-            for i in proxies:
-                if i.port == 8002:
-                    return i
-            return None
-        nproxies3 = proxies.deduplicate(select_8002_ports)
+    nproxies2 = proxies.deduplicate(partial(filter, lambda x: x.anonymity_level == AnonymityLevel.Elite))
+    assert len(nproxies2) == 1
 
-        self.assertEqual(len(nproxies3), 2)
-
-if __name__ == "__main__":
-    unittest.main(verbosity=3)
+    nproxies3 = proxies.deduplicate(partial(filter, lambda x: x.port == 8002))
+    assert len(nproxies3) == 2
