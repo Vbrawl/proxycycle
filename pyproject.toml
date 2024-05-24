@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "proxycycle"
-version = "1.1.2"
+version = "1.2.0"
 description = "A Library to easily load/fetch proxy servers."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -72,3 +72,6 @@ exclude_lines = [
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
 ]
+
+[project.scripts]
+fetch-proxy = "proxycycle.cli.fetch_proxy:fetch_proxy"
