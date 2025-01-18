@@ -1,8 +1,9 @@
-from enum import IntFlag, auto
+from __future__ import annotations
+from enum import StrEnum
 
 
-class Scheme(IntFlag):
-    Undefined = 0
-    HTTP      = auto()
-    SOCKS4    = auto()
-    SOCKS5    = auto()
+class Scheme(StrEnum):
+    Undefined   = "all"
+    HTTP        = "http"
+    SOCKS4      = "socks4"
+    SOCKS5      = "socks5"

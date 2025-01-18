@@ -1,11 +1,12 @@
 from __future__ import annotations
-from typing import Iterable, Iterator, TYPE_CHECKING, Callable
+from typing import Iterable, Iterator, TYPE_CHECKING, Callable, Coroutine
 if TYPE_CHECKING: from _typeshed import SupportsNoArgReadline
 from .Proxy import Proxy
 import itertools
 import warnings
+import asyncio
 
-class ProxySet(Iterable):
+class ProxySet(Iterable[Proxy]):
     """A set-like iterable object to hold multiple proxies.
     """
     def __init__(self, proxies:Iterable[Proxy] = []):
@@ -14,7 +15,7 @@ class ProxySet(Iterable):
         Args:
             proxies (Iterable[Proxy], optional): An iterable with proxy objects. Defaults to [].
         """
-        self._proxies = []
+        self._proxies: list[Proxy] = []
         self.extend_with_proxysets(proxies)
     
     def __repr__(self) -> str:
@@ -59,37 +60,6 @@ class ProxySet(Iterable):
         """
         return itertools.cycle(self._proxies)
 
-    def deduplicate(self, select:Callable[[list[Proxy]], Iterable[Proxy]|Proxy|None] = lambda x: x[0]) -> ProxySet:
-        """Remove duplicates of the same host.
-
-        NOTE: If "select" returns an Iterable, all proxies in it are included.
-        NOTE 2: If "select" returns a Proxy, it is included.
-        NOTE 3: If "select" returns None, it is assumed no proxy was selected and no proxy is included.
-
-        Args:
-            select (Callable[[list[Proxy]], Iterable[Proxy]|Proxy|None], optional): A callable that accepts a list[Proxy] as parameter and returns either an Iterable[Proxy], Proxy or None. Defaults to lambdax:x[0].
-
-        Returns:
-            ProxySet: A proxy set containing all proxies returned by the "select" callable.
-        """
-        proxies:dict[str, list[Proxy]] = {}
-        proxyset = ProxySet()
-
-        for proxy in self:
-            if proxy.host in proxies:
-                proxies[proxy.host].append(proxy)
-            else:
-                proxies[proxy.host] = [proxy]
-
-        for proxy in map(select, proxies.values()):
-            if proxy is not None:
-                if isinstance(proxy, Iterable):
-                    proxyset.extend_with_proxysets(proxy)
-                else:
-                    proxyset.set_proxy(proxy)
-
-        return proxyset
-
     @classmethod
     def fromFile(cls, fileR:SupportsNoArgReadline[str]) -> ProxySet:
         """Initialize a ProxySet from a file of proxies.
@@ -100,7 +70,7 @@ class ProxySet(Iterable):
         Returns:
             ProxySet: The initialized proxyset.
         """
-        proxies = []
+        proxies: list[Proxy] = []
 
         while (line := fileR.readline()).strip():
             try:
@@ -108,3 +78,23 @@ class ProxySet(Iterable):
             except ValueError as err:
                 warnings.warn(str(err), SyntaxWarning)
         return ProxySet(proxies)
+    
+    async def filter_async(self, func: Callable[[Proxy], Coroutine[None, None, bool]]) -> ProxySet:
+        async def run_func(proxy: Proxy) -> Proxy|None:
+            status = await func(proxy)
+            if status:
+                return proxy
+
+        jobs: list[Coroutine[None, None, Proxy|None]] = []
+        for i in self:
+            proxy = run_func(i)
+            jobs.append(proxy)
+        
+        results:set[Proxy] = set()
+        for res in await asyncio.gather(*jobs):
+            if res is not None:
+                results.add(res)
+        return ProxySet(results)
+
+    def filter(self, func: Callable[[Proxy], bool]):
+        return ProxySet(filter(func, self))

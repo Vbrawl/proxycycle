@@ -5,14 +5,14 @@ from .enums import Scheme, AnonymityLevel
 class Proxy:
     """A class to hold information about a proxy server
     """
-    def __init__(self, host:str, port:int, scheme:Scheme|int = Scheme.Undefined, anonymity_level:AnonymityLevel|int = AnonymityLevel.Undefined, latency:int = -1):
+    def __init__(self, host:str, port:int, scheme:Scheme|str = Scheme.Undefined, anonymity_level:AnonymityLevel|str = AnonymityLevel.Undefined, country: str | None = None, latency:int = -1):
         """Initialize a proxy instance.
 
         Args:
             host (str): The hostname or ip address of the proxy server.
             port (int): The port to connect for the proxy service.
-            scheme (Scheme | int, optional): The scheme/protocol used for connecting to the proxy. Defaults to Scheme.Undefined.
-            anonymity_level (AnonymityLevel | int, optional): The anonymity level of the proxy. Defaults to AnonymityLevel.Undefined.
+            scheme (Scheme | str, optional): The scheme/protocol used for connecting to the proxy. Defaults to Scheme.Undefined.
+            anonymity_level (AnonymityLevel | str, optional): The anonymity level of the proxy. Defaults to AnonymityLevel.Undefined.
             latency (int, optional): The latency of the server (At least what we know). Defaults to -1.
         """
         self.host = host
@@ -23,12 +23,12 @@ class Proxy:
         self.latency = latency
     
     def __repr__(self) -> str:
-        return "%s(host=%s, port=%d, scheme=%d, anonymity_level=%d, latency=%d)" % (
+        return f"%s(host=%s, port=%d, scheme=%s, anonymity_level=%s, latency=%d)" % (
             self.__class__.__qualname__,
             repr(self.host),
             self.port,
-            int(self.scheme),
-            int(self.anonymity_level),
+            repr(self.scheme.value),
+            repr(self.anonymity_level.value),
             self.latency
         )
     
@@ -117,14 +117,7 @@ class Proxy:
             str: The string representation of the data.
         """
         string = f"{self.host}:{self.port}"
-        try:
-            schemeName = {
-                Scheme.HTTP: "http",
-                Scheme.SOCKS4: "socks4",
-                Scheme.SOCKS5: "socks5"
-            }[self.scheme]
-            string = schemeName + '://' + string
-        except KeyError:
-            pass # Silent
+        if self.scheme != Scheme.Undefined:
+            string = self.scheme + "://" + string
         
         return string

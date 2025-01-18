@@ -1,8 +1,8 @@
-from enum import IntFlag, auto
+from __future__ import annotations
+from enum import StrEnum
 
-
-class AnonymityLevel(IntFlag):
-    Undefined   = 0
-    Transparent = auto()
-    Anonymous   = auto()
-    Elite       = auto()
+class AnonymityLevel(StrEnum):
+    Undefined   = "all"
+    Transparent = "transparent"
+    Anonymous   = "anonymous"
+    Elite       = "elite"

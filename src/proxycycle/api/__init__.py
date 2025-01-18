@@ -1,1 +1,1 @@
-from .proxyscrape import ProxyScrape
+from .proxyscrape import ProxyScrape # type: ignore

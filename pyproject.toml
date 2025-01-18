@@ -20,7 +20,11 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = ["requests"]
+dependencies = [
+  "requests",
+  "aiohttp",
+  "aiohttp_socks"
+]
 
 [project.urls]
 Documentation = "https://github.com/Vbrawl/proxycycle#readme"

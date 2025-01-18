@@ -4,7 +4,6 @@ from proxycycle.ProxySet import ProxySet
 from proxycycle.Proxy import Proxy
 from proxycycle.enums import AnonymityLevel
 from io import StringIO
-from functools import partial
 
 @pytest.fixture
 def proxy1():
@@ -70,7 +69,7 @@ def test_len(proxy1:Proxy, proxy2:Proxy, proxy3:Proxy):
 def test_iter(proxy1:Proxy, proxy2:Proxy, proxy3:Proxy):
     loop_number = 0
     ps = ProxySet([proxy1, proxy2, proxy3])
-    for p in ps:
+    for _ in ps:
         loop_number += 1
     assert loop_number == 3
 
@@ -83,11 +82,11 @@ def test_cycle(proxy1:Proxy, proxy2:Proxy, proxy3:Proxy):
         return i
 
     ps = ProxySet()
-    conditions = {}
+    conditions: dict[int, Proxy] = {}
     max_loop = 0
     
     # 0
-    for i in ps.cycle():
+    for _ in ps.cycle():
         assert False
 
     # 1
@@ -120,23 +119,3 @@ def test_fromFile(proxy1:Proxy, proxy2:Proxy, proxy3:Proxy, proxy1alt:Proxy):
     assert len(ps) == len(ps2)
     for i, proxy in enumerate(ps):
         assert proxy == ps2[i]
-
-
-def test_deduplicate():
-    # Don't use proxy1, proxy1alt, etc because we need to know the exact proxy definitions to test this case.
-    proxies = ProxySet([
-        Proxy("127.0.0.1", 8000),
-        Proxy("127.0.0.1", 8001, anonymity_level=AnonymityLevel.Anonymous),
-        Proxy("127.0.0.1", 8002, anonymity_level=AnonymityLevel.Elite),
-        Proxy("127.0.0.2", 8000),
-        Proxy("127.0.0.3", 8002)
-    ])
-
-    nproxies = proxies.deduplicate()
-    assert len(nproxies) == 3
-
-    nproxies2 = proxies.deduplicate(partial(filter, lambda x: x.anonymity_level == AnonymityLevel.Elite))
-    assert len(nproxies2) == 1
-
-    nproxies3 = proxies.deduplicate(partial(filter, lambda x: x.port == 8002))
-    assert len(nproxies3) == 2

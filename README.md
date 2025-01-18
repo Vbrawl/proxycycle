@@ -20,57 +20,80 @@ pip install proxycycle
 ## Usage
 
 ```python
+######  Simple  ######
+
+import proxycycle as pc
+from proxycycle import filters as pcfilters
+import requests
+
+# Fetch proxies
+pset = pc.ProxyScrape.fetch_proxyset(50, scheme = pc.Scheme.HTTP, timeout=300)
+
+# Filter proxies
+pset_filtered = pcfilters.DummyUseCheck(timeout=10).run(pset)
+# Some checks support asyncio:
+# pset_filtered = asyncio.run(pcfilters.DummyUseCheck(timeout=10).run_async(pset))
+
+# Loop from start to end, then exit the loop
+for proxy in pset_filtered:
+    proxy_dict = {
+        "http": proxy.toString(),
+        "https": proxy.toString()
+    }
+
+    # request through proxy
+    resp = requests.get(url, proxies = proxy_dict)
+
+# Loop from start to end, forever, exit the loop only if/when there are no more proxies
+for proxy in pset_filtered.cycle():
+    proxy_dict = {
+        "http": proxy.toString(),
+        "https": proxy.toString()
+    }
+    resp = requests.get(url, proxies = proxy_dict)
+
+
+###### Advanced ######
+
 ### Initialize a proxy object
 from proxycycle.Proxy import Proxy
-from proxycycle.enums.scheme import Scheme
-from proxycycle.enums.anonymity_level import AnonymityLevel
 proxy1 = Proxy("127.0.0.1", 8080)
-proxy2 = Proxy("127.0.0.1", 8080, Scheme.HTTP)
-proxy3 = Proxy("127.0.0.1", 8080, anonymity_level=AnonymityLevel.Elite)
-proxy4 = Proxy("127.0.0.1", 8080, Scheme.HTTP, AnonymityLevel.Elite)
-proxy5 = Proxy.fromString("127.0.0.1:8080")
-proxy6 = Proxy.fromString("http://127.0.0.1:8080")
+proxy2 = Proxy.fromString("127.0.0.1:8080")
+proxy3 = Proxy.fromString("http://127.0.0.1:8080")
 
-### Initialize a proxyset
+### Initialize a proxyset (manually)
 from proxycycle.ProxySet import ProxySet
+ps1 = ProxySet([proxy2, proxy3])
 
-ps1 = ProxySet([proxy2, proxy3, proxy4])
-
-ps2 = ProxySet()
-ps2.set_proxy(proxy1)
-
-ps3 = ProxySet()
-ps3.extend_with_proxysets(ps1, ps2)
-
+### Initialize a proxyset (from file)
 with open('file.txt', 'r') as f:
-    ps4 = ProxySet.fromFile(f)
+    ps2 = ProxySet.fromFile(f)
 
-### Initialize a proxyset without pre-known proxies
+### Initialize a proxyset (automatically)
 from proxycycle.api.proxyscrape import ProxyScrape
-ps5 = ProxyScrape.fetch_proxyset(50)
-len(ps5) # less or equal to 50   ^^ (this 50)
+ps3 = ProxyScrape.fetch_proxyset(limit = 50)
 
-### Sometimes a single host can have multiple proxy servers
-### In that case we can filter out some of the proxy entries.
-from functools import partial
+# Add a proxy to a proxyset
+ps4 = ProxySet()
+ps4.set_proxy(proxy1)
 
-# Get the first (by index) proxy
-ps1_deduplicated = ps1.deduplicate()
+# Extend proxyset with other proxysets (ps4 = ps4 + ps1 + ps2 + ps3)
+ps4.extend_with_proxysets(ps1, ps2, ps3)
 
-# Get proxies with port number > 8080
-ps1_8080 = ps1.deduplicate(partial(filter, lambda x: x.port > 8080))
+# Filtering (Using .filter())
+ps5 = ps4.filter(lambda p: p.scheme == Scheme.HTTP)
 
-# Get the proxy with the highest anonymity level
-def select_highest_anonymity_proxy(proxylist:list[Proxy]):
-    proxy:Proxy|None = None
-    for p in proxylist:
-        if proxy is None:
-            proxy = p
-        elif p.anonymity_level > proxy.anonymity_level:
-            proxy = p
-    return proxy
-
-ps1_highest_anonymity = ps1.deduplicate(select_highest_anonymity_proxy)
+# Filtering (Using .filter_async())
+import asyncio
+async def check(p):
+    import aiohttp
+    try:
+        async with aiohttp.ClientSession(proxy = p.toString()) as c:
+            async with c.get(url) as resp:
+                return True
+    except Exception:
+        return False
+ps6 = asyncio.run(ps4.filter_async(check))
 ```
 
 ## License

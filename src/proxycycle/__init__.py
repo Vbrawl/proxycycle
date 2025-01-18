@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-from .Proxy import Proxy
-from .ProxySet import ProxySet
-from .enums import Scheme, AnonymityLevel
-from .api import ProxyScrape
+from .Proxy import Proxy # type: ignore
+from .ProxySet import ProxySet # type: ignore
+from .enums import Scheme, AnonymityLevel # type: ignore
+from .api import ProxyScrape # type: ignore
